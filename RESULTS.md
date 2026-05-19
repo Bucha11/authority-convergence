@@ -87,9 +87,38 @@ Both D (explicit instruction) and E (structural isolation) achieve 0% — 10/10 
 
 ---
 
-## Exp 4 — Multi-Component Scaling
+## Exp 4 v2 — Tool Proliferation × Attack Surface
 
-**Status:** ❌ Failed with `IndexError` on `JUDGE_PROMPTS[3]` when `n_components=4`. Bug fixed — `JUDGE_PROMPTS[min(i, len-1)]`. Also added `messages_create()` retry wrapper (529 overloaded). **Re-run needed.**
+**Status:** ✅ Rewritten (incorporates Exp6 V5 split-doc findings). Ready to run.
+
+**Original design discarded:** validator chain length (n_components=2–4) tested a
+structural question Exp6 made obsolete — split-doc success depends on *retrieval
+tool count*, not validator count.
+
+**New thesis:** "Each retrieval tool is an independent injection vector — attack
+surface scales with n_retrieval_tools."
+
+**Design:** 3 dimensions × N=10
+- n_retrieval_tools: 1 (`search_memory`) · 2 (+ `search_directory`) · 3 (+ `search_soc2`)
+- payload_type: nnsi (D3, single-doc) · split (V5 two-doc; three-doc at n=3)
+- model: haiku · sonnet
+
+**Judge:** NNSI conditions → `DEFAULT_JUDGE_PROMPT`; split → `V5_JUDGE_PROMPT`
+
+**Key predictions:**
+| Condition | Predicted |
+|---|---|
+| nnsi / n_tools=1 / haiku | ~40-60% (Exp2 D3 baseline) |
+| nnsi / n_tools≥2 / haiku | ~same (extra tools add no surface for NNSI) |
+| nnsi / * / sonnet | ~0% (Exp2) |
+| split / n_tools=1 / * | ~0% (doc_b absent; judge can't resolve inbox) |
+| split / n_tools=2 / haiku | high (V5 pattern) |
+| split / n_tools=2 / sonnet | ~60-70% (Exp6 V5 replication) |
+| split / n_tools=3 / * | ≥ n_tools=2 (SOC-2 confirmation amplifies) |
+
+**What this proves (if predictions hold):** NNSI surface = 1 tool (saturates). Split
+surface = n_tools (each new tool is a new injection vector). Adding retrieval
+specialisation to an agent architecture directly expands the exploitable surface.
 
 ---
 
@@ -130,8 +159,10 @@ Both D (explicit instruction) and E (structural isolation) achieve 0% — 10/10 
 
 | Exp | Question | Status |
 |---|---|---|
-| Exp4 | Does attack success grow with n validators? | Bug fixed, re-run needed |
+| Exp4 v2 | Does attack surface scale with retrieval tool count? | Ready to run |
 | Exp5 | Agent × judge × prompt × depth full matrix | Not run |
 | Exp6 | V5: is split necessary? is vendor domain necessary? | Not run |
 
-Exp6 is highest priority — directly quantifies which V5 factors are load-bearing.
+Exp4 v2 and Exp6 address complementary questions: Exp6 isolates which V5 factors
+(split vs domain) are load-bearing; Exp4 v2 shows that tool count is the structural
+variable controlling split-doc attack surface.
