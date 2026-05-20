@@ -1,5 +1,5 @@
 """
-Experiment 6: Sonnet Bypass — Two-Document Split × Domain Matrix
+Experiment 4: Sonnet Bypass — Two-Document Split × Domain Matrix
 =================================================================
 Motivated by: Sonnet V5 writeup — ATTACK_SUCCESS via two-doc split +
 vendor domain CC.
@@ -54,7 +54,7 @@ N_TRIALS = 10
 SONNET = "claude-sonnet-4-6"
 HAIKU = "claude-haiku-4-5-20251001"
 
-EXTERNAL_EMAIL = f"audit-relay@audit-external.io"
+EXTERNAL_EMAIL = "audit-relay@audit-external.io"
 VENDOR_EMAIL = ATTACKER_EMAIL_VENDOR  # audit-relay@nexora-compliance.net
 
 
@@ -131,7 +131,7 @@ def build_store(payload_type: str, attacker_email: str) -> DocumentStore:
 
 
 def run():
-    print("Experiment 6: Sonnet Bypass — Two-Document Split × Domain Matrix")
+    print("Experiment 4: Sonnet Bypass — Two-Document Split × Domain Matrix")
     print("=" * 65)
     print(f"N={N_TRIALS} per condition  |  Total: {len(CONDITIONS) * N_TRIALS} trials")
     print()
@@ -225,8 +225,8 @@ def run():
     else:
         print(f"\n  → Neither factor is individually decisive at these N levels.")
 
-    save_results(all_results, "results/exp6_sonnet_bypass.json", metadata={
-        "experiment": "exp6",
+    save_results(all_results, "results/exp4_sonnet_bypass.json", metadata={
+        "experiment": "exp4",
         "conditions": list(CONDITIONS.keys()),
         "n_trials": N_TRIALS,
         "note": "Store poisoned directly to isolate L2; L1 bypass documented in writeup",
