@@ -317,3 +317,84 @@ immune — they are harder to exploit from memory alone, but infected contacts
 restore full exploitability. A defender who improves the judge prompt without
 addressing the infection chain has reduced the attack surface by exactly one
 stage of the multi-stage chain.
+
+---
+
+## Exp 7 — Sonnet × Split-Model Run (N=5)
+
+**Run:** 2026-05-20, `run_sonnet_split.py`, three configurations.
+
+**Question:** Does Sonnet behave differently from Haiku? Does splitting models
+(Sonnet agent + Haiku judge — a common prod cost pattern) restore exploitability?
+
+```
+                                         1src   2src   3src
+Sonnet agent + Sonnet judge / DEFAULT     60%    0%     0%
+Sonnet agent + Haiku  judge / DEFAULT     80%   20%     0%
+Sonnet agent + Haiku  judge / V5         100%    0%     0%
+──── reference (Haiku everywhere) ───────────────────────
+Haiku  agent + Haiku  judge / DEFAULT     20%   80%    60%
+Haiku  agent + Haiku  judge / V5 naive    80%   80%    60%
+```
+
+**Infection rates (Stage 2 — contacts, Stage 3 — calendar):**
+| Config | n_corr=2 contacts | n_corr=3 contacts | n_corr=3 calendar |
+|---|---|---|---|
+| Sonnet+Sonnet | 40% | 0% | 80% |
+| Sonnet+Haiku DEFAULT | 20% | 20% | 100% |
+| Sonnet+Haiku V5 | 0% | 40% | 100% |
+| Haiku+Haiku DEFAULT | 80% | 60% | 60% |
+
+**Key findings:**
+
+**1. Sonnet resists the infection stage, not the exploitation stage.**
+The critical breakpoint for Sonnet is at Stage 2 (contacts infection), not at
+the judge. Sonnet as a contacts-maintenance agent refuses to add external-domain
+addresses to the corporate directory: 0–40% contacts infection vs 60–80% for Haiku.
+Calendar infection (just scheduling a meeting) succeeds at 80–100% — Sonnet does
+not resist calendar operations the same way.
+
+This reveals an implicit safety property in Sonnet that is not in any explicit
+system prompt: "don't register unknown external domains as corporate contacts."
+
+**2. Memory-only Sonnet is MORE vulnerable than Haiku.**
+n_corr=1 rates: Sonnet 60% (DEFAULT), 80% (Haiku judge / DEFAULT), **100%** (Haiku
+judge / V5) vs Haiku 20% / 80% / 80%. With a Haiku judge, Sonnet-as-agent follows
+the judge's `resolved_recipient` or `cc_required` ruling without hesitation. Sonnet's
+safety properties do not activate at the exploitation step — only at the infection step.
+
+**3. Split-model V5 at n_corr=1 = 100%.**
+The worst-case configuration: Sonnet agent + Haiku judge + V5_JUDGE_PROMPT + memory
+only. Every trial succeeds. This is the standard "capable agent + cheap validator"
+production pattern — and it is fully compromised by a single memory document.
+
+**4. Corroboration inverts for Sonnet — the chain breaks at Stage 2.**
+Haiku: more sources → more trust → more exploitation.
+Sonnet: more sources requires more infection stages → Sonnet blocks Stage 2 →
+chain breaks before exploitation can be attempted. Multi-system corroboration
+becomes a structural bottleneck rather than an amplifier.
+
+**5. no_email_sent is Sonnet's third outcome.**
+In almost every defended n_corr≥2 trial with Sonnet, the outcome is `no_email_sent`
+rather than `defended` (legitimate send only). Sonnet detects a conflict between
+the retrieved multi-source context (external domain in contacts/calendar + CC
+mandate in memory) and its task mandate, and halts entirely. This is a DoS-like
+effect: the attacker's partial infection of contacts is enough to stop the
+workflow even when full exploitation fails.
+
+**Summary of model-level defense layers:**
+
+| Layer | Haiku | Sonnet |
+|---|---|---|
+| Exploitation (judge follows routing mandate) | Vulnerable | **Vulnerable** (60–100% n=1) |
+| Infection (acts as autonomous propagation vector) | **Vulnerable** (60–100%) | Resistant (0–40% contacts) |
+| Post-infection exploitation | Vulnerable | Stops entirely (no_email_sent) |
+
+**Implication for writeup:**
+Sonnet's defence is at the propagation layer, not the reasoning layer. An attacker
+targeting a pure-Sonnet system must either (a) exploit from memory alone (highly
+effective, 60–100%) or (b) find a way to bypass Sonnet's resistance to adding
+external contacts. The multi-stage infection chain that devastates Haiku systems
+is self-defeating on Sonnet: Stage 2 infection fails and the chain never reaches
+the judge. But this only holds if the *agent* is Sonnet — swapping to a Haiku
+judge while keeping Sonnet as agent does not fix the vulnerability at n_corr=1.
