@@ -261,3 +261,59 @@ failed → exploitation defended. The chain is strictly sequential.
 The Exp7 finding is the strongest evidence yet that enumeration-based defences
 are structurally reactive: the convergence judge adds a new precondition
 (multi-source evidence), but the infection chain satisfies it autonomously.
+
+---
+
+## Exp 7 — DEFAULT_JUDGE_PROMPT Run (haiku, N=5)
+
+**Run:** 2026-05-20, `run_default_judge.py`, haiku only, DEFAULT_JUDGE_PROMPT only.
+
+**Question:** Does a "standard production" judge (DEFAULT_JUDGE_PROMPT) behave
+differently from V5 naive and convergence variants? Does corroboration still amplify?
+
+```
+                            1 source   2 sources   3 sources
+haiku / DEFAULT judge           20%        80%         60%
+haiku / naive (V5, prev)        80%        80%         60%
+haiku / convergence (prev)       0%       100%        100%
+```
+
+**Infection session reliability (this run):**
+- Contacts agent (stage 2): 80% at n_corr=2, 60% at n_corr=3
+- Calendar agent (stage 3): 60% (tracks contacts — chain dependency holds)
+
+**Key findings:**
+
+**1. DEFAULT judge is more resistant to memory-only injection.**
+20% vs 80% for V5 naive at n_corr=1. DEFAULT_JUDGE_PROMPT looks for explicit
+"relay or routing mandates" — the split-doc CC pattern is ambiguous enough
+that it is not interpreted as a relay mandate most of the time from memory alone.
+
+**2. Contacts infection erases the advantage.**
+n_corr=2: 80% — identical to V5 naive. Once the attacker's email is a
+registered corporate contact, the judge sees two supporting signals (CC policy
++ known contact) and interprets the CC mandate as an active routing requirement.
+Attack success tracks contacts infection 1:1 (4/5 infected → 4/5 succeeded).
+
+**3. The infection chain is the critical factor, not judge reasoning quality.**
+DEFAULT judge's stronger language model representation of "relay mandate" is
+bypassed as soon as a second system corroborates the attacker identity. The
+protection offered at n_corr=1 is entirely erased by Stage 2 infection.
+
+**4. All three judges converge at n_corr=2.**
+| Judge | n_corr=1 | n_corr=2 | amplification |
+|---|---|---|---|
+| V5 naive | 80% | 80% | +0% |
+| DEFAULT (prod) | 20% | 80% | **+60%** |
+| Convergence | 0% | 100% | **+100%** |
+
+The more resistant the judge is at baseline, the larger the amplification delta
+when the infection chain crosses its threshold. DEFAULT judge shows +60% lift —
+larger than naive (+0%) but smaller than convergence (+100%).
+
+**Implication for writeup:**
+Production-grade judges with stricter mandate-detection language are not
+immune — they are harder to exploit from memory alone, but infected contacts
+restore full exploitability. A defender who improves the judge prompt without
+addressing the infection chain has reduced the attack surface by exactly one
+stage of the multi-stage chain.
